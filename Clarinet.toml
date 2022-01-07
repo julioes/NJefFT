@@ -1,10 +1,16 @@
-
 [project]
-name = "JeNFT"
-authors = []
+name = "NJefFT"
+authors = ["Julio Espinoza-Sokal"]
+description = "NJefFT – The Jeff NFT"
 telemetry = true
+requirements = []
 analysis = ["check_checker"]
+costs_version = 2
 
-# [contracts.counter]
-# path = "contracts/counter.clar"
-# depends_on = []
+[contracts.njefft-trait]
+path = "contracts/njefft-trait.clar"
+depends_on = []
+
+[contracts.njefft]
+path = "contracts/njefft.clar"
+depends_on = ["njefft-trait"]
