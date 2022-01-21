@@ -14,12 +14,9 @@
 ;; public functions
 ;;
 
-;; use the SIP090 interface (testnet)
-;; trait deployed by deployer address from ./settings/Devnet.toml
-(impl-trait 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.njefft-trait.njefft-trait)
-;;(impl-trait 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.nft-trait.nft-trait)
+(impl-trait .njefft-trait.njefft-trait)
 
-;; define a new NFT. Make sure to replace MY-OWN-NFT
+;; define a new NFT.
 (define-non-fungible-token njefft uint)
 
 ;; Store the last issues token ID
@@ -33,7 +30,8 @@
 (define-public (transfer (token-id uint) (sender principal) (recipient principal))
   (begin
      (asserts! (is-eq tx-sender sender) (err u403))
-     ;; Make sure to replace MY-OWN-NFT
+     ;; token-id and recipient are untrusted but nft-transfer will error out
+     ;; #[allow(unchecked_data)]
      (nft-transfer? njefft token-id sender recipient)
   )
 )
@@ -46,7 +44,6 @@
 
 ;; SIP009: Get the owner of the specified token ID
 (define-read-only (get-owner (token-id uint))
-  ;; Make sure to replace MY-OWN-NFT
   (ok (nft-get-owner? njefft token-id)))
 
 ;; SIP009: Get the last token ID
@@ -61,5 +58,4 @@
 (define-private (mint (new-owner principal))
     (let ((next-id (+ u1 (var-get last-id))))
       (var-set last-id next-id)
-      ;; Make sure to replace MY-OWN-NFT
       (nft-mint? njefft next-id new-owner)))
