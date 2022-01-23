@@ -3,7 +3,7 @@ import { Clarinet, Tx, Chain, Account, types } from 'https://deno.land/x/clarine
 // @ts-ignore
 import { assertEquals } from 'https://deno.land/std@0.122.0/testing/asserts.ts';
 
-const IPFS_ROOT = "QmNrq2BQYA6JQEsP4PQg5XX7YSfeud5ikigi9MZmEV6W9w"
+const IPFS_ROOT = "QmXbkRfwnC3yZ7zJQxicX6pu71vWErs2yx5eLmsfehV6bd"
 const ERR_OWNER_ONLY = 100
 const ERR_MINT_LIMIT = 101
 const ERR_MINT_DISABLED = 102
@@ -169,16 +169,26 @@ Clarinet.test({
             Tx.contractCall("njefft", "get-mint-limit", [], wallet_2.address),
             Tx.contractCall("njefft", "claim", [], wallet_2.address),
             Tx.contractCall("njefft", "claim", [], wallet_2.address),
+            Tx.contractCall("njefft", "claim", [], wallet_2.address),
+            Tx.contractCall("njefft", "claim", [], wallet_2.address),
+            Tx.contractCall("njefft", "claim", [], wallet_2.address),
+            Tx.contractCall("njefft", "claim", [], wallet_2.address),
+            Tx.contractCall("njefft", "claim", [], wallet_2.address),
             Tx.contractCall("njefft", "get-last-token-id", [], wallet_2.address)
         ]);
-        assertEquals(block.receipts.length, 5);
+        assertEquals(block.receipts.length, 10);
         assertEquals(block.height, 2);
 
         block.receipts[0].result.expectOk().expectBool(true);
-        block.receipts[1].result.expectOk().expectUint(1);
+        block.receipts[1].result.expectOk().expectUint(6);
         block.receipts[2].result.expectOk().expectBool(true);
-        block.receipts[3].result.expectErr().expectUint(ERR_MINT_LIMIT);
-        block.receipts[4].result.expectOk().expectUint(1);
+        block.receipts[3].result.expectOk().expectBool(true);
+        block.receipts[4].result.expectOk().expectBool(true);
+        block.receipts[5].result.expectOk().expectBool(true);
+        block.receipts[6].result.expectOk().expectBool(true);
+        block.receipts[7].result.expectOk().expectBool(true);
+        block.receipts[8].result.expectErr().expectUint(ERR_MINT_LIMIT);
+        block.receipts[9].result.expectOk().expectUint(6);
     },
 });
 
@@ -191,7 +201,7 @@ Clarinet.test({
         let block = chain.mineBlock([
             Tx.contractCall("njefft", "toggle-enabled", [], deployer.address),
             Tx.contractCall("njefft", "get-mint-limit", [], wallet_2.address),
-            Tx.contractCall("njefft", "set-mint-limit", ["u2"], deployer.address),
+            Tx.contractCall("njefft", "set-mint-limit", ["u1"], deployer.address),
             Tx.contractCall("njefft", "get-mint-limit", [], wallet_2.address),
             Tx.contractCall("njefft", "claim", [], wallet_2.address),
             Tx.contractCall("njefft", "claim", [], wallet_2.address),
@@ -201,12 +211,12 @@ Clarinet.test({
         assertEquals(block.height, 2);
 
         block.receipts[0].result.expectOk().expectBool(true);
-        block.receipts[1].result.expectOk().expectUint(1);
+        block.receipts[1].result.expectOk().expectUint(6);
         block.receipts[2].result.expectOk().expectBool(true);
-        block.receipts[3].result.expectOk().expectUint(2);
+        block.receipts[3].result.expectOk().expectUint(1);
         block.receipts[4].result.expectOk().expectBool(true);
-        block.receipts[5].result.expectOk().expectBool(true);
-        block.receipts[6].result.expectOk().expectUint(2);
+        block.receipts[5].result.expectErr().expectUint(ERR_MINT_LIMIT);
+        block.receipts[6].result.expectOk().expectUint(1);
     },
 });
 
@@ -223,9 +233,39 @@ Clarinet.test({
         assertEquals(block.receipts.length, 3);
         assertEquals(block.height, 2);
 
-        block.receipts[0].result.expectOk().expectUint(1);
+        block.receipts[0].result.expectOk().expectUint(6);
         block.receipts[1].result.expectErr().expectUint(ERR_OWNER_ONLY);
-        block.receipts[2].result.expectOk().expectUint(1);
+        block.receipts[2].result.expectOk().expectUint(6);
+    },
+});
+
+Clarinet.test({
+    name: "Deployer cannot change mint limit below issued tokens",
+    async fn(chain: Chain, accounts: Map<string, Account>) {
+        const deployer = accounts.get("deployer")!;
+        const wallet_2 = accounts.get("wallet_2")!;
+
+        let block = chain.mineBlock([
+            Tx.contractCall("njefft", "toggle-enabled", [], deployer.address),
+            Tx.contractCall("njefft", "get-mint-limit", [], wallet_2.address),
+            Tx.contractCall("njefft", "claim", [], wallet_2.address),
+            Tx.contractCall("njefft", "claim", [], wallet_2.address),
+            Tx.contractCall("njefft", "claim", [], wallet_2.address),
+            Tx.contractCall("njefft", "set-mint-limit", ["u1"], deployer.address),
+            Tx.contractCall("njefft", "get-mint-limit", [], wallet_2.address),
+            Tx.contractCall("njefft", "get-last-token-id", [], wallet_2.address)
+        ]);
+        assertEquals(block.receipts.length, 8);
+        assertEquals(block.height, 2);
+
+        block.receipts[0].result.expectOk().expectBool(true);
+        block.receipts[1].result.expectOk().expectUint(6);
+        block.receipts[2].result.expectOk().expectBool(true);
+        block.receipts[3].result.expectOk().expectBool(true);
+        block.receipts[4].result.expectOk().expectBool(true);
+        block.receipts[5].result.expectErr().expectUint(ERR_MINT_LIMIT);
+        block.receipts[6].result.expectOk().expectUint(6);
+        block.receipts[7].result.expectOk().expectUint(3);
     },
 });
 

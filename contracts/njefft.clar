@@ -103,7 +103,7 @@
 (define-public (set-mint-limit (limit uint))
   (begin
     (asserts! (is-eq tx-sender contract-owner) err-owner-only)
-    (asserts! (> limit (var-get mint-limit)) err-mint-limit)
+    (asserts! (> limit (var-get last-id)) err-mint-limit)
     (ok (var-set mint-limit limit))))
 
 (define-public (set-ipfs-cid (cid (string-ascii 80)))
