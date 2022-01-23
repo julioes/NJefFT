@@ -13,7 +13,7 @@
 ;; data maps and vars
 ;;
 ;; limit number of tokens
-(define-data-var mint-limit uint u1)
+(define-data-var mint-limit uint u6)
 ;; Store the last issues token ID
 (define-data-var last-id uint u0)
 ;; price of new tokens
@@ -21,7 +21,7 @@
 ;; creator address
 (define-data-var creator-address principal 'ST1SJ3DTE5DN7X54YDH5D64R3BCB6A2AG2ZQ8YPD5)
 ;; metadata ipfs root cid
-(define-data-var ipfs-cid (string-ascii 80) "QmNrq2BQYA6JQEsP4PQg5XX7YSfeud5ikigi9MZmEV6W9w")
+(define-data-var ipfs-cid (string-ascii 80) "QmXbkRfwnC3yZ7zJQxicX6pu71vWErs2yx5eLmsfehV6bd")
 ;; minting paused
 (define-data-var mint-enabled bool false)
 
