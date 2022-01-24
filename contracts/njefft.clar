@@ -9,6 +9,14 @@
 (define-constant err-mint-limit (err u101))
 (define-constant err-mint-disabled (err u102))
 (define-constant err-invalid-input (err u103))
+(define-constant err-not-found (err u104))
+(define-constant err-listing (err u105))
+(define-constant err-wrong-commission (err u106))
+
+(impl-trait .njefft-trait.njefft-trait)
+
+(define-trait commission-trait
+    ((pay (uint uint) (response bool uint))))
 
 ;; data maps and vars
 ;;
@@ -17,13 +25,15 @@
 ;; Store the last issues token ID
 (define-data-var last-id uint u0)
 ;; price of new tokens
-(define-data-var price uint u1000000)
+(define-data-var mint-price uint u1000000)
 ;; creator address
 (define-data-var creator-address principal 'ST1SJ3DTE5DN7X54YDH5D64R3BCB6A2AG2ZQ8YPD5)
 ;; metadata ipfs root cid
 (define-data-var ipfs-cid (string-ascii 80) "QmXbkRfwnC3yZ7zJQxicX6pu71vWErs2yx5eLmsfehV6bd")
 ;; minting paused
 (define-data-var mint-enabled bool false)
+;; listing map
+(define-map market uint {price: uint, commission: principal})
 
 ;; private functions
 ;;
@@ -40,13 +50,11 @@
         true
         (begin
           ;; transfer stx
-          (try! (stx-transfer? (var-get price) tx-sender (var-get creator-address)))
+          (try! (stx-transfer? (var-get mint-price) tx-sender (var-get creator-address)))
         )
       )
       (var-set last-id next-id)
       (nft-mint? njefft next-id new-owner)))
-
-(impl-trait .njefft-trait.njefft-trait)
 
 ;; define a new NFT.
 (define-non-fungible-token njefft uint)
@@ -61,6 +69,7 @@
 (define-public (transfer (token-id uint) (sender principal) (recipient principal))
   (begin
      (asserts! (is-eq tx-sender sender) err-owner-only)
+     (asserts! (is-none (map-get? market token-id)) err-listing)
      ;; token-id and recipient are untrusted but nft-transfer will error out
      ;; #[allow(unchecked_data)]
      (nft-transfer? njefft token-id sender recipient)))
@@ -89,11 +98,11 @@
     (asserts! (< u0 (stx-get-balance address)) err-invalid-input) ;; how to validate a principal?
     (ok (var-set creator-address address))))
 
-(define-public (set-price (new-price uint))
+(define-public (set-mint-price (new-price uint))
   (begin
     (asserts! (is-eq tx-sender contract-owner) err-owner-only)
     (asserts! (< u0 new-price) err-invalid-input) ;; uint cant be negative anyway
-    (ok (var-set price new-price))))
+    (ok (var-set mint-price new-price))))
 
 (define-public (toggle-enabled)
   (begin
@@ -115,8 +124,52 @@
 (define-read-only (get-mint-enabled)
   (ok (var-get mint-enabled)))
 
-(define-read-only (get-price)
-  (ok (var-get price)))
+(define-read-only (get-mint-price)
+  (ok (var-get mint-price)))
 
 (define-read-only (get-mint-limit)
   (ok (var-get mint-limit)))
+
+(define-read-only (get-listing-in-ustx (id uint))
+  (map-get? market id))
+
+(define-public (list-in-ustx (id uint) (list-price uint) (comm <commission-trait>))
+  (let (
+      (listing  {price: list-price, commission: (contract-of comm)})
+      (owner (unwrap! (nft-get-owner? njefft id) err-not-found))
+    )
+    (asserts! (is-eq tx-sender owner) err-owner-only)
+    (map-set market id listing)
+    (print (merge listing {action: "list-in-ustx", id: id}))
+    (ok true)))
+
+(define-public (unlist-in-ustx (id uint))
+  (let (
+      (owner (unwrap! (nft-get-owner? njefft id) err-not-found))
+    )
+    (asserts! (is-eq tx-sender owner) err-owner-only)
+    (map-delete market id)
+    (print {action: "unlist-in-ustx", id: id})
+    (ok true)))
+
+(define-public (buy-in-ustx (id uint) (comm <commission-trait>))
+  (let (
+      (owner (unwrap! (nft-get-owner? njefft id) err-not-found))
+      (listing (unwrap! (map-get? market id) err-listing))
+      (list-price (get price listing))
+    )
+    (asserts! (is-eq (contract-of comm) (get commission listing)) err-wrong-commission)
+    (try! (stx-transfer? list-price tx-sender owner))
+    (if (is-eq (as-contract tx-sender) (contract-of comm))
+      (try! (pay id list-price))
+      (try! (contract-call? comm pay id list-price))
+    )
+    (try! (nft-transfer? njefft id owner tx-sender))
+    (map-delete market id)
+    (print {action: "buy-in-ustx", id: id})
+    (ok true)))
+
+(define-public (pay (id uint) (price uint))
+  (begin
+    (try! (stx-transfer? (/ price u50) tx-sender (var-get creator-address)))
+    (ok true)))
