@@ -587,6 +587,38 @@ Clarinet.test({
         block.receipts[3].result.expectErr().expectUint(ERR_LISTING);
     },
 });
+
+Clarinet.test({
+    name: "NFT can only be listed once",
+    async fn(chain: Chain, accounts: Map<string, Account>) {
+        const deployer = accounts.get("deployer")!;
+        const wallet_1 = accounts.get("wallet_1")!;
+        const wallet_2 = accounts.get("wallet_2")!;
+        const wallet_3 = accounts.get("wallet_3")!;
+
+        let block = chain.mineBlock([
+            Tx.contractCall("njefft", "toggle-enabled", [], deployer.address),
+            Tx.contractCall("njefft", "claim", [], wallet_2.address),
+            Tx.contractCall("njefft", "list-in-ustx", ["u1", "u2000000", `'${deployer.address}.njefft`], wallet_2.address),
+            Tx.contractCall("njefft", "list-in-ustx", ["u1", "u4000000", `'${deployer.address}.njefft`], wallet_2.address),
+            Tx.contractCall("njefft", "buy-in-ustx", ["u1", `'${deployer.address}.njefft`], wallet_3.address),
+            Tx.contractCall("njefft", "get-owner", ["u1"], wallet_2.address)
+        ]);
+
+        assertEquals(block.receipts.length, 6);
+        assertEquals(block.height, 2);
+
+        block.receipts[0].result.expectOk().expectBool(true);
+        block.receipts[1].result.expectOk().expectBool(true);
+        block.receipts[2].result.expectOk().expectBool(true);
+        block.receipts[3].result.expectOk().expectBool(true);
+        block.receipts[4].result.expectOk().expectBool(true);
+        block.receipts[4].events.expectSTXTransferEvent(4_000_000, wallet_3.address, wallet_2.address);
+        block.receipts[4].events.expectSTXTransferEvent(80_000, wallet_3.address, wallet_1.address);
+        block.receipts[5].result.expectOk().expectSome().expectPrincipal(wallet_3.address);
+    },
+});
+
 /*
 Clarinet.test({
     name: "NFT can be listed - broken",
