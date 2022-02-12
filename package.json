@@ -1,0 +1,6 @@
+{
+  "description": "install tslib at root to ignore hint issue, not used",
+  "dependencies": {
+    "tslib": "^2.3.1"
+  }
+}
